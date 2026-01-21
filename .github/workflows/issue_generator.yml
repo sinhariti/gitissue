@@ -1,0 +1,45 @@
+name: First Issue Generator
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * 1' # Run every Monday at midnight
+
+jobs:
+  generate-issues:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Needed to commit changes or create PRs
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Run Issue Generator
+        run: |
+          python -m generator.main --path . --output ./generated_issues
+
+      - name: Check for changes
+        id: check_changes
+        run: |
+          if [ -d "generated_issues" ] && [ "$(ls -A generated_issues)" ]; then
+            echo "has_issues=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_issues=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload Artifacts
+        if: steps.check_changes.outputs.has_issues == 'true'
+        uses: actions/upload-artifact@v3
+        with:
+          name: potential-issues
+          path: generated_issues/
+
+      # Optional: Commit directly to a branch or create a PR
+      # For now, let's just upload artifacts to keep it safe.
+      # Users can download artifacts and decide what to do.
